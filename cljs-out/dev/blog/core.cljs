@@ -1,24 +1,44 @@
 (ns ^:figwheel-hooks blog.core
   (:require
    [goog.dom :as gdom]
+   [goog.string :as gstring]
    [reagent.core :as reagent :refer [atom]]
    [reagent.dom :as rdom]))
 
 
+;;################################################################
+;; Symbols
+;;################################################################
 
-;; define your app data so that it doesn't get over-written on reload
-(defonce app-state (atom {:text "Hello world!"}))
 
+(defn sym
+  [kw]
+  (gstring/unescapeEntities (str "&" (name kw) ";")))
+
+#_(sym :nexist)
 
 ;;################################################################
 ;; Main
 ;;################################################################
 
+(defn gen-link
+  
+  [label]
+  
+  (fn [label]
+    
+    [:a [:div.node label]]))
+
 (defn main-page
+  
   []
-  [:div
-   [:h1 "Kyle Eschen"]
-   [:div "A simple website for a simple man."]])
+  
+  [:div.node 
+   [:h2 "Kyle Eschen"]
+   [:div "A simple website for a simple man."]
+   [gen-link "About"]
+   [gen-link "Essays"]
+   [gen-link "Videos"]])
 
 ;;################################################################
 ;; Mount
