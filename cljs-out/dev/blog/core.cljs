@@ -4,23 +4,32 @@
    [reagent.core :as reagent :refer [atom]]
    [reagent.dom :as rdom]))
 
-(println "This text is printed from src/blog/core.cljs. Go ahead and edit it and see reloading in action.")
 
-(defn multiply [a b] (* a b))
 
 ;; define your app data so that it doesn't get over-written on reload
 (defonce app-state (atom {:text "Hello world!"}))
 
-(defn get-app-element []
-  (gdom/getElement "app"))
 
-(defn hello-world []
+;;################################################################
+;; Main
+;;################################################################
+
+(defn main-page
+  []
   [:div
-   [:h1 (:text @app-state)]
-   [:h3 "Edit this in src/blogcore.cljs and watch it change!"]])
+   [:h1 "Kyle Eschen"]
+   [:div "A simple website for a simple man."]])
+
+;;################################################################
+;; Mount
+;;################################################################
+
 
 (defn mount [el]
-  (rdom/render [hello-world] el))
+  (rdom/render [main-page] el))
+
+(defn get-app-element []
+  (gdom/getElement "app"))
 
 (defn mount-app-element []
   (when-let [el (get-app-element)]
