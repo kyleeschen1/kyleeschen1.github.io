@@ -146,8 +146,7 @@
 
 (defmethod render-page :tab/contact
   [_]
-  [:div "ttte."])
-
+  [:div "There is no value in contacting me."])
 
 
 (defn gen-page-body

@@ -21,10 +21,10 @@ return (function (label__$1){
 return new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"a","a",-2123407586),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div.node","div.node",-445611527),label__$1], null)], null);
 });
 });
-re_frame.core.reg_event_db.call(null,new cljs.core.Keyword("header","select-tab","header/select-tab",-533128113),(function (db,p__19561){
-var vec__19562 = p__19561;
-var _ = cljs.core.nth.call(null,vec__19562,(0),null);
-var tag = cljs.core.nth.call(null,vec__19562,(1),null);
+re_frame.core.reg_event_db.call(null,new cljs.core.Keyword("header","select-tab","header/select-tab",-533128113),(function (db,p__19587){
+var vec__19588 = p__19587;
+var _ = cljs.core.nth.call(null,vec__19588,(0),null);
+var tag = cljs.core.nth.call(null,vec__19588,(1),null);
 return cljs.core.assoc.call(null,db,new cljs.core.Keyword("header","selected-tab","header/selected-tab",-1712463359),tag);
 }));
 re_frame.core.reg_sub.call(null,new cljs.core.Keyword("header","selected-tab","header/selected-tab",-1712463359),(function (db,_){
@@ -72,7 +72,7 @@ cljs.core._add_method.call(null,blog.core.render_page,new cljs.core.Keyword("tab
 return new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),"I am not fit for the screen."], null);
 }));
 cljs.core._add_method.call(null,blog.core.render_page,new cljs.core.Keyword("tab","contact","tab/contact",608945313),(function (_){
-return new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),"ttte."], null);
+return new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),"There is no value in contacting me."], null);
 }));
 blog.core.gen_page_body = (function blog$core$gen_page_body(){
 return (function (){
