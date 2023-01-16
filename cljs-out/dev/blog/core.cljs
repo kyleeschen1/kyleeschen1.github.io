@@ -38,7 +38,7 @@
  (fn [db _]
 
    (merge db
-          {:header/selected-tag :tab/about})))
+          {:header/selected-tab :tab/about})))
 
 (defn init-db
   []

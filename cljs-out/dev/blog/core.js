@@ -11,7 +11,7 @@ blog.core.sym = (function blog$core$sym(kw){
 return goog.string.unescapeEntities(["&",cljs.core.name.call(null,kw),";"].join(''));
 });
 re_frame.core.reg_event_db.call(null,new cljs.core.Keyword(null,"init-db","init-db",1595181278),(function (db,_){
-return cljs.core.merge.call(null,db,new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword("header","selected-tag","header/selected-tag",1614731534),new cljs.core.Keyword("tab","about","tab/about",1423483058)], null));
+return cljs.core.merge.call(null,db,new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword("header","selected-tab","header/selected-tab",-1712463359),new cljs.core.Keyword("tab","about","tab/about",1423483058)], null));
 }));
 blog.core.init_db = (function blog$core$init_db(){
 return re_frame.core.dispatch_sync.call(null,new cljs.core.PersistentVector(null, 1, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"init-db","init-db",1595181278)], null));
@@ -21,10 +21,10 @@ return (function (label__$1){
 return new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"a","a",-2123407586),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div.node","div.node",-445611527),label__$1], null)], null);
 });
 });
-re_frame.core.reg_event_db.call(null,new cljs.core.Keyword("header","select-tab","header/select-tab",-533128113),(function (db,p__19587){
-var vec__19588 = p__19587;
-var _ = cljs.core.nth.call(null,vec__19588,(0),null);
-var tag = cljs.core.nth.call(null,vec__19588,(1),null);
+re_frame.core.reg_event_db.call(null,new cljs.core.Keyword("header","select-tab","header/select-tab",-533128113),(function (db,p__19597){
+var vec__19598 = p__19597;
+var _ = cljs.core.nth.call(null,vec__19598,(0),null);
+var tag = cljs.core.nth.call(null,vec__19598,(1),null);
 return cljs.core.assoc.call(null,db,new cljs.core.Keyword("header","selected-tab","header/selected-tab",-1712463359),tag);
 }));
 re_frame.core.reg_sub.call(null,new cljs.core.Keyword("header","selected-tab","header/selected-tab",-1712463359),(function (db,_){
