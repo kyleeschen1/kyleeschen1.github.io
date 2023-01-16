@@ -124,7 +124,7 @@
 
 (defmulti render-page identity)
 
-(defmethod render-page :tab/about
+(defmethod render-page :default
   [_]
   [:div.row {:style {:width "100%"}}
    [:div.col {:style {:width "30%"}} "There is no interesting information about me."]
@@ -146,7 +146,7 @@
 
 (defmethod render-page :tab/contact
   [_]
-  [:div "Please don't contact me."])
+  [:div "ttte."])
 
 
 

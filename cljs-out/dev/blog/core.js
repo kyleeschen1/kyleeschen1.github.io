@@ -21,10 +21,10 @@ return (function (label__$1){
 return new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"a","a",-2123407586),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div.node","div.node",-445611527),label__$1], null)], null);
 });
 });
-re_frame.core.reg_event_db.call(null,new cljs.core.Keyword("header","select-tab","header/select-tab",-533128113),(function (db,p__19549){
-var vec__19550 = p__19549;
-var _ = cljs.core.nth.call(null,vec__19550,(0),null);
-var tag = cljs.core.nth.call(null,vec__19550,(1),null);
+re_frame.core.reg_event_db.call(null,new cljs.core.Keyword("header","select-tab","header/select-tab",-533128113),(function (db,p__19561){
+var vec__19562 = p__19561;
+var _ = cljs.core.nth.call(null,vec__19562,(0),null);
+var tag = cljs.core.nth.call(null,vec__19562,(1),null);
 return cljs.core.assoc.call(null,db,new cljs.core.Keyword("header","selected-tab","header/selected-tab",-1712463359),tag);
 }));
 re_frame.core.reg_sub.call(null,new cljs.core.Keyword("header","selected-tab","header/selected-tab",-1712463359),(function (db,_){
@@ -62,7 +62,7 @@ var hierarchy__4751__auto__ = cljs.core.get.call(null,cljs.core.PersistentArrayM
 return (new cljs.core.MultiFn(cljs.core.symbol.call(null,"blog.core","render-page"),cljs.core.identity,new cljs.core.Keyword(null,"default","default",-1987822328),hierarchy__4751__auto__,method_table__4747__auto__,prefer_table__4748__auto__,method_cache__4749__auto__,cached_hierarchy__4750__auto__));
 })();
 }
-cljs.core._add_method.call(null,blog.core.render_page,new cljs.core.Keyword("tab","about","tab/about",1423483058),(function (_){
+cljs.core._add_method.call(null,blog.core.render_page,new cljs.core.Keyword(null,"default","default",-1987822328),(function (_){
 return new cljs.core.PersistentVector(null, 4, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div.row","div.row",133678515),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"style","style",-496642736),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"width","width",-384071477),"100%"], null)], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div.col","div.col",-1800797011),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"style","style",-496642736),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"width","width",-384071477),"30%"], null)], null),"There is no interesting information about me."], null),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div.col","div.col",-1800797011),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"style","style",-496642736),new cljs.core.PersistentArrayMap(null, 2, [new cljs.core.Keyword(null,"width","width",-384071477),"70%",new cljs.core.Keyword(null,"float","float",-1732389368),"left"], null)], null)], null)], null);
 }));
 cljs.core._add_method.call(null,blog.core.render_page,new cljs.core.Keyword("tab","essays","tab/essays",-1695572512),(function (_){
@@ -72,7 +72,7 @@ cljs.core._add_method.call(null,blog.core.render_page,new cljs.core.Keyword("tab
 return new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),"I am not fit for the screen."], null);
 }));
 cljs.core._add_method.call(null,blog.core.render_page,new cljs.core.Keyword("tab","contact","tab/contact",608945313),(function (_){
-return new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),"Please don't contact me."], null);
+return new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),"ttte."], null);
 }));
 blog.core.gen_page_body = (function blog$core$gen_page_body(){
 return (function (){
