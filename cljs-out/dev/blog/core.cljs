@@ -72,7 +72,7 @@
  :set-focus
 
  (fn [db [_ id ctx]]
-   
+
    (assoc-in db [ctx :focus] id)))
 
 
@@ -90,7 +90,7 @@
 
  :<- [:focus-id]
  
- (fn [[focus-id] [_ id]]
+ (fn [focus-id [_ id]]
    
    (= id focus-id)))
 
@@ -117,12 +117,13 @@
         
         [:div {:id id
                :style {:border (when (<sub [:in-focus? id])
+                                 (println (str "In focus: " id))
                                  "0.2em solid red")
                        :padding "1em 1em 1em 1em"
                        }}
          element])})))
 
-
+(declare gen-sym)
 (defn add-scrolls
   
   [ctx]
@@ -138,7 +139,10 @@
     
     (fn [ctx]
       [:div {:style {:height "150em"
-                     :padding-top "50%"}}
+                     :padding-top "1em"
+                     }}
+
+       [gen-sym]
 
        [add-scroll "Title" ctx [:h2 "Demo"]]
        [add-scroll "a" ctx [:div "1) Action 1"]]
@@ -156,6 +160,201 @@
 
 #_(sym :nexist)
 
+(declare render)
+
+(defmulti -render :render-tag)
+
+(defmethod -render :default
+  [{:keys [text]}]
+  [:div text])
+
+(defmethod -render :equation
+  [{:keys [text nodes]}]
+
+  (into
+   
+   [:div {:style {:display "flex"
+                  :flex-direction "row"
+                  :gap "0.5em"
+                  :align-items "center"}}]
+
+   (for [n nodes]
+     ^{:key n} [render n])))
+
+(defmethod -render :bracket
+  [{:keys [text nodes]}]
+
+  (let [border "0.1em solid black"
+        start [:div {:style {:border-left border
+                             :border-top border
+                             :border-bottom border
+                             :width "0.1em"
+                             :height "1.2em"}}]
+
+        end [:div {:style {:border-right "0.1em solid black"
+                           :border-top "0.1em solid black"
+                           :border-bottom "0.1em solid black"
+                           :height "1.2em"
+                           :width "0.1em"}}]]
+
+    (conj
+     (into
+
+      
+      [:div {:style {:display "flex"
+                     :flex-direction "row"
+                     ;; :gap "0.5em"
+                     :justify-items "even-spacing"
+                     :align-items "center"
+                     
+                     ;; :border-right "0.1em solid black"
+                     }}
+
+       
+       start]
+
+      (for [n nodes]
+        ^{:key n} [render n]))
+    end)))
+
+(defmethod -render :fraction
+  [{:keys [num den]}]
+
+  (into
+   
+   [:div {:style {:display "inline-flex"
+                  :flex-direction "column"
+                  :justify-content "center"
+                  :align-items "center"
+                  :text-align "center"}}
+
+    [:div {:style {:font-size "0.5em" :padding "0em 1em 0em"} } [render num]]
+    [:hr {:style {:width "100%" :font-size "0.5em"}}]
+    [:div {:style {:font-size "0.5em" :padding "0em 1em 0em"} } [render den]]]))
+
+(defmethod -render :derivative
+  [{:keys [num den partial?]}]
+
+  (let [d (if partial?
+            (sym :part)
+            "d")]
+
+    (into
+     
+     [:div {:style {:display "inline-flex"
+                    :flex-direction "column"
+                    :justify-content "center"
+                    :align-items "center"
+                    :text-align "center"}}
+
+      [:div {:style {:font-size "0.5em"
+                     :padding "0em 1em 0em"
+                     :display "flex"
+                     :flex-direction "row"} } d [render num]]
+      [:hr {:style {:width "100%" :font-size "0.5em"}}]
+      [:div {:style {:font-size "0.5em"
+                     :padding "0em 1em 0em"
+                     :display "flex"
+                     :flex-direction "row"} } d [render den]]])))
+
+
+(defmethod -render :sym
+  [{:keys [key]}]
+  (sym key))
+
+(defmethod -render :log
+  [{:keys [arg]}]
+  [:div {:style {:display "flex"
+                 :flex-direction "row"
+                 :align-items "center"}}
+   "log(" [:div {:style {:font-size "0.75em"
+                        ;; :text-align "center"
+                         }} [render arg]] ")"])
+
+(defn render-exp
+  [node* exp]
+  [:div {:style {:display "flex"
+                 :flex-direction "row"
+                 :align-items "center"}}
+
+   node*
+   [:div {:style {:font-size "0.75em"
+                  :transform "translateY(-1.25em)"
+                  }}
+    [render exp]]])
+
+
+(defn render-coef
+  [node* coef]
+  [:div {:style {:display "flex"
+                 :flex-direction "row"}}
+   [render coef] node*])
+
+(defn render
+  [{:keys [exp coef] :as node}
+   ]
+  (let [node* (-render node)
+        node* (if coef
+                (render-coef node* coef)
+                node*)]
+    (if exp
+      (render-exp node* exp)
+      node*)))
+
+
+(defn gen-sym
+  []
+  [:div {:style {:font-size "15px"
+                 ;;:font-weight "bold"
+                 }}
+   (render {:render-tag :bracket
+
+            :nodes [{:render-tag :log
+                     :arg
+                     {:render-tag :equation
+
+                      :nodes [{:render-tag :sym
+                               :coef {:render-tag :default
+                                      :text 2
+                                      }
+                               :key :lambda
+                               :exp {:render-tag :fraction
+                                     :num {:text 14}
+                                     :den {:text 15}}}
+
+                              {:render-tag :op
+                               :text '+}
+                              
+                              {:render-tag :fraction
+                               :num {:render-tag :sym
+                                     :key :pi
+                                     :coef
+                                     {:render-tag :default
+                                      :text 10}}
+                               :den {:render-tag :default
+                                     :text "2"}}
+
+                              {:render-tag :op
+                               :text '+}
+
+                              {:render-tag :derivative
+                               :partial? true
+                               :num {:render-tag :default
+                                     :text 'y}
+                               :den
+
+                               {:render-tag :default
+                                :text 'x}}]}}]})]
+
+  
+  #_[:div {:style {:display "flex"
+                 :flex-direction "row"
+                 :gap "1.2em"
+                 :align-items "center"}}
+
+   [:div {:style {:font-size "1.2em"}} (sym :forall)] "x" ", "
+
+   [:div {:style {:font-size "1.2em"}} (sym :exist)] "y" " such that " "f(x)" "=" "y"])
 
 
 
