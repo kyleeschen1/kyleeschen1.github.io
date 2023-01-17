@@ -166,7 +166,7 @@
 
 (defmethod -render :default
   [{:keys [text]}]
-  [:div text])
+  [:div.math text])
 
 (defmethod -render :equation
   [{:keys [text nodes]}]
@@ -175,7 +175,7 @@
    
    [:div {:style {:display "flex"
                   :flex-direction "row"
-                  :gap "0.5em"
+                  :gap "1em"
                   :align-items "center"}}]
 
    (for [n nodes]
@@ -260,15 +260,18 @@
 
 (defmethod -render :sym
   [{:keys [key]}]
-  (sym key))
+  [:div.math (sym key)])
 
 (defmethod -render :log
   [{:keys [arg]}]
-  [:div {:style {:display "flex"
+  [:div.math {:style {:display "flex"
                  :flex-direction "row"
                  :align-items "center"}}
-   "log(" [:div {:style {:font-size "0.75em"
-                        ;; :text-align "center"
+   "log(" [:div {:style {:display "flex"
+                 :flex-direction "row"
+                 :align-items "center"
+                         :font-size "0.75em"
+                         :text-align "center"
                          }} [render arg]] ")"])
 
 (defn render-exp
@@ -302,49 +305,59 @@
       node*)))
 
 
+
 (defn gen-sym
   []
   [:div {:style {:font-size "15px"
-                 ;;:font-weight "bold"
-                 }}
+                 :font-family "Garamond"
+                 :margin-bottom "2em"}
+         :class "math"}
+  
    (render {:render-tag :bracket
 
-            :nodes [{:render-tag :log
-                     :arg
-                     {:render-tag :equation
+            :nodes [{:render-tag :equation
+                      :nodes
 
-                      :nodes [{:render-tag :sym
-                               :coef {:render-tag :default
-                                      :text 2
-                                      }
-                               :key :lambda
-                               :exp {:render-tag :fraction
-                                     :num {:text 14}
-                                     :den {:text 15}}}
+                      [{:render-tag :sym
+                        :key :pi}
+                       {:render-tag :op
+                        :text '+}
+                       {:render-tag :log
+                        :arg
+                        {:render-tag :equation
 
-                              {:render-tag :op
-                               :text '+}
-                              
-                              {:render-tag :fraction
-                               :num {:render-tag :sym
-                                     :key :pi
-                                     :coef
-                                     {:render-tag :default
-                                      :text 10}}
-                               :den {:render-tag :default
-                                     :text "2"}}
+                         :nodes [{:render-tag :sym
+                                  :coef {:render-tag :default
+                                         :text 2
+                                         }
+                                  :key :lambda
+                                  :exp {:render-tag :fraction
+                                        :num {:text 14}
+                                        :den {:text 15}}}
 
-                              {:render-tag :op
-                               :text '+}
+                                 {:render-tag :op
+                                  :text '+}
+                                 
+                                 {:render-tag :fraction
+                                  :num {:render-tag :sym
+                                        :key :pi
+                                        :coef
+                                        {:render-tag :default
+                                         :text 10}}
+                                  :den {:render-tag :default
+                                        :text "2"}}
 
-                              {:render-tag :derivative
-                               :partial? true
-                               :num {:render-tag :default
-                                     :text 'y}
-                               :den
+                                 {:render-tag :op
+                                  :text '+}
 
-                               {:render-tag :default
-                                :text 'x}}]}}]})]
+                                 {:render-tag :derivative
+                                  :partial? true
+                                  :num {:render-tag :default
+                                        :text 'y}
+                                  :den
+
+                                  {:render-tag :default
+                                   :text 'x}}]}}]}]})]
 
   
   #_[:div {:style {:display "flex"
