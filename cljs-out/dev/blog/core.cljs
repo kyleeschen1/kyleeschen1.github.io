@@ -4,6 +4,7 @@
    [re-frame.core :as rf]
 
    [cljs.repl :refer [source]]
+   [cljsjs.waypoints]
 
    
    [goog.dom :as gdom]
@@ -11,6 +12,138 @@
    [reagent.core :as reagent :refer [atom]]
    [reagent.dom :as rdom]))
 
+
+;;################################################################
+;; Re-Frame
+;;################################################################
+
+(defn <sub
+  [params]
+  @(rf/subscribe params))
+
+(defn >evt
+  [params]
+  (rf/dispatch params))
+
+
+;;################################################################
+;; Scrolling
+;;################################################################
+
+
+
+(defn set-scroll
+
+  "Sets some action for when
+   a particular element hits
+   the viewport."
+
+  [id f]
+  
+  (let [element (.getElementById js/document id)
+        params {:element element
+                :handler f
+                :offset "25%"}]
+    
+    (js/Waypoint. (clj->js params))))
+
+(defmulti on-scroll
+  
+  (fn [event-id dir params]
+    
+    [event-id (keyword dir)]))
+
+(defmethod on-scroll :default
+  [id dir _]
+  (println (str  "Scrolled: " id " " dir)))
+
+
+(defmethod on-scroll [:a-root :down]
+  [_ _ _]
+  (println "A scrolled down!"))
+
+(defmethod on-scroll [:b :up]
+  [_ _ _]
+  (println "B scrolled up!"))
+
+
+(rf/reg-event-db
+
+ :set-focus
+
+ (fn [db [_ id ctx]]
+   
+   (assoc-in db [ctx :focus] id)))
+
+
+(rf/reg-sub
+
+ :focus-id
+
+ (fn [db _]
+   
+   (get-in db [:root :focus])))
+
+(rf/reg-sub
+
+ :in-focus?
+
+ :<- [:focus-id]
+ 
+ (fn [[focus-id] [_ id]]
+   
+   (= id focus-id)))
+
+
+
+(defn add-scroll
+  
+  [id ctx element]
+
+  (fn [id ctx element]
+    
+    (reagent/create-class
+     
+     {:component-did-mount
+      (fn [this]
+        (when (= :root ctx)
+          (set-scroll (str id) (fn [dir]
+                                 (>evt [:set-focus id ctx])
+                                 (on-scroll (keyword id) dir nil)))))
+
+      
+      :reagent-render
+      (fn [id ctx element]
+        
+        [:div {:id id
+               :style {:border (when (<sub [:in-focus? id])
+                                 "0.2em solid red")
+                       :padding "1em 1em 1em 1em"
+                       }}
+         element])})))
+
+
+(defn add-scrolls
+  
+  [ctx]
+
+  (reagent/create-class
+
+   {:component-will-unmount
+    
+    (fn [_]
+      (>evt [:set-focus nil ctx]))
+    
+    :reagent-render
+    
+    (fn [ctx]
+      [:div {:style {:height "150em"
+                     :padding-top "50%"}}
+
+       [add-scroll "Title" ctx [:h2 "Demo"]]
+       [add-scroll "a" ctx [:div "1) Action 1"]]
+       [add-scroll "b" ctx [:div "2) Action 2"]]
+       [add-scroll "c" ctx [:div "3) Action 3"]]])}))
 
 ;;################################################################
 ;; Symbols
@@ -31,76 +164,73 @@
 ;; Re-Frame
 ;;################################################################
 
+
+
 (rf/reg-event-db
 
- :init-db
+ :init-ctx
  
- (fn [db _]
-
+ (fn [db [_ ctx]]
    (merge db
-          {:header/selected-tab :tab/about})))
+          {ctx {:current-tab :tab/about}})))
 
 (defn init-db
   []
-  (rf/dispatch-sync [:init-db]))
+  #_(rf/dispatch-sync [:init-ctx :sub])
+  #_(rf/dispatch-sync [:init-ctx :root]))
 
 ;;################################################################
 ;; Main
 ;;################################################################
 
-(defn gen-link
-  
-  [label]
-  
-  (fn [label]
-    
-    [:a [:div.node label]]))
-
 (rf/reg-event-db
- :header/select-tab
- (fn [db [_ tag]]   
-   (assoc db :header/selected-tab tag)))
+ 
+ :switch-tab
+ 
+ (fn [db [_ tag ctx]]   
+   (assoc-in db [ctx :current-tab] tag)))
 
 (rf/reg-sub
- :header/selected-tab
- (fn [db _]
-   (get db :header/selected-tab)))
+ 
+ :current-tab
+ 
+ (fn [db [_ ctx]]
+   (get-in db [ctx :current-tab])))
 
-(defn <sub
-  [params]
-  @(rf/subscribe params))
 
-(defn >evt
-  [params]
-  (rf/dispatch params))
+(defmulti render-page
+  (fn [id _]
+    id))
 
 (defn gen-header-tab
   
-  [label tag]
+  [label tag ctx]
 
-  (let [data (atom {:font-size "10px"
+  (let [data (atom {:font-size "1em"
                     :padding "none"
                     :background "none"
                     :border "none"})]
     
     (fn [label tag]
 
-      (let [style (if (= tag (<sub [:header/selected-tab]))
+      (let [style (if (= tag (<sub [:current-tab ctx]))
                     {:color "red" :font-weight "bold"}
                     {:color "black"})]
         
         [:button {:style (merge @data style)
-                  :on-click #(>evt [:header/select-tab tag])
+                  :on-click #(>evt [:switch-tab tag ctx])
                   :on-mouse-over #(swap! data merge {:font-weight "bold"})
                   :on-mouse-out #(swap! data merge {:font-weight nil})}
          
          label]))))
 
-(defn gen-header-tabs
+(defmethod render-page :header-tabs
   
-  []
+  [_ ctx]
 
-  [:div 
+  [:div {:style {:top "0px"
+                 :position "sticky"
+                 :background "white"}}
    
    [:div {:style {:display "flex"
                   :flex-direction "row"
@@ -109,60 +239,117 @@
                   :align-items "flex-end"
                   :font-family "Verdana"
 
-                  :border-bottom "solid 2px black"
-                  :padding "10px 15px 10px 15px"}}
+                  :border-bottom "solid 0.2em black"
+                  :padding "1em 1.5em 1em 1.5em"}}
     
-    [:div {:style {:font-size "15px"
+    [:div {:style {:font-size "1.5em"
                    :font-weight "bold"}} "Kyle Eschen"]
 
 
-    [gen-header-tab "About" :tab/about]
-    [gen-header-tab "Essays" :tab/essays]
-    [gen-header-tab "Videos" :tab/videos]
-    [gen-header-tab "Contact" :tab/contact]]])
+    [gen-header-tab "About" :tab/about ctx]
+    [gen-header-tab "Essays" :tab/essays ctx]
+    [gen-header-tab "Videos" :tab/videos ctx]
+    [gen-header-tab "Contact" :tab/contact ctx]]])
 
 
-(defmulti render-page identity)
+(defn gen-row-of-cols
+  
+  [& cols]
 
-(defmethod render-page :default
-  [_]
-  [:div.row {:style {:width "100%"}}
-   [:div.col {:style {:width "30%"}} "There is no interesting information about me."]
-   [:div.col {:style {:width "70%"
-                      :float "left"}}
+  (let [cols (mapv (fn [[flex col]]
+                     [:div {:style {:flex flex}} col])
+                   cols)
 
-    ]])
+        row [:div {:style {:display "flex"}}]]
+    
+    (into row cols)))
+
+
+(defmethod render-page :tab/about
+  [_ ctx]
+  (gen-row-of-cols
+   [0.3 [:div "There is no interesting information about me."]]))
+
+(defmethod render-page :essay-text-col
+  [_ ctx]
+  [:div {:style {:padding "1em 1em 1em 1em"}}
+   [add-scrolls ctx]])
+
+(defmethod render-page :essay-display-col
+  [_ ctx]
+  [:div {:style {:padding "1em 1em 1em 1em"
+                 :width "70%"
+                 :position "fixed"}}
+
+   [:div {:style {:font-size "0.8em"
+                  :width (str (* 0.8 70) "%")
+                  :position "sticky"}}
+
+    [render-page :main-page (keyword (str (name ctx) "-1"))]]
+   #_[:div {:height "500px"
+            :width "500px"
+            :display "inline-block"
+            :style {:border "0.1em solid black"
+                    ;; :position "sticky"
+                    }}]])
 
 (defmethod render-page :tab/essays
-  [_]
-  [:img {:src "images/Henrietta.gif"
-           :style {:height "25%"
-                   :width "25%"}}]
-  #_[:div "I'm not allowed to write according to my publicist."])
+  [_ ctx]
+  (gen-row-of-cols 
+   [0.3 [render-page :essay-text-col ctx]]
+   [0.7 [render-page :essay-display-col ctx]]))
 
 (defmethod render-page :tab/videos
-  [_]
+  [_ ctx]
   [:div "I am not fit for the screen."])
 
 (defmethod render-page :tab/contact
-  [_]
+  [_ ctx]
   [:div "There is no value in contacting me."])
 
 
-(defn gen-page-body
-  []
-  (fn []
-    [:div {:style {:font-family "Verdana"
-                   :font-size "10px"
-                   :margin "30px 10px 10px 10px"}}
-     (render-page (<sub [:header/selected-tab]))]))
+(defmethod render-page :page-body
+  [_ ctx]
+  
+  (fn [_ ctx]
+    
+    (let [tab (<sub [:current-tab ctx])]
+      
+      [:div {:style {:font-size "1em"                  
+                     :margin "3em 1em 1em 1em"}}
+       
+       ^{:key :page} [render-page tab ctx]])))
+
+
+(rf/reg-sub
+ 
+ :exists?
+ 
+ (fn [db [_ ctx]]
+   
+   (get db ctx)))
+
+
+(defmethod render-page :main-page
+  [_ ctx]
+
+  (>evt [:init-ctx ctx])
+
+  (fn [_ ctx]
+
+    (if-not (<sub [:exists? ctx])
+
+      [:div]
+
+      [:div {:class (name ctx)}
+       [render-page :header-tabs ctx]
+       [render-page :page-body ctx]])))
+
 
 
 (defn main-page
   []
-  [:div
-   [gen-header-tabs]
-   [gen-page-body]])
+  [render-page :main-page :root])
 
 ;;################################################################
 ;; Mount

@@ -176,9 +176,10 @@ goog.addDependency("../re_frame/core.js", ['re_frame.core'], ['re_frame.interop'
 goog.addDependency("../cljs/spec/gen/alpha.js", ['cljs.spec.gen.alpha'], ['goog.Uri', 'cljs.core']);
 goog.addDependency("../cljs/spec/alpha.js", ['cljs.spec.alpha'], ['cljs.core', 'goog.object', 'clojure.string', 'clojure.walk', 'cljs.spec.gen.alpha']);
 goog.addDependency("../cljs/repl.js", ['cljs.repl'], ['goog.string', 'cljs.core', 'goog.string.format', 'cljs.spec.alpha']);
+goog.addDependency("../cljsjs/waypoints/development/waypoints.inc.js", ['waypoints', 'cljsjs.waypoints'], [], {'foreign-lib': true});
 goog.addDependency("../cljsjs/react-dom/development/react-dom.inc.js", ['react_dom', 'cljsjs.react.dom'], ['react'], {'foreign-lib': true});
 goog.addDependency("../reagent/dom.js", ['reagent.dom'], ['reagent.impl.util', 'reagent.impl.protocols', 'reagent.ratom', 'cljs.core', 'reagent.impl.template', 'reagent.impl.batching', 'reagent.impl.input', 'react_dom']);
-goog.addDependency("../blog/core.js", ['blog.core'], ['re_frame.core', 'cljs.repl', 'goog.dom', 'goog.string', 'reagent.core', 'reagent.dom', 'cljs.core']);
+goog.addDependency("../blog/core.js", ['blog.core'], ['re_frame.core', 'cljs.repl', 'cljsjs.waypoints', 'goog.dom', 'goog.string', 'reagent.core', 'reagent.dom', 'cljs.core']);
 goog.addDependency("../cljs/test.js", ['cljs.test'], ['cljs.core', 'cljs.pprint', 'clojure.string']);
 goog.addDependency("../figwheel/main/async_result.js", ['figwheel.main.async_result'], ['cljs.core', 'figwheel.repl']);
 goog.addDependency("../figwheel/main/testing.js", ['figwheel.main.testing'], ['goog.dom', 'cljs.core', 'cljs.test', 'clojure.string', 'figwheel.main.async_result']);
