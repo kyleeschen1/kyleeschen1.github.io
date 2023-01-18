@@ -7,8 +7,12 @@
 
   <style>
 
+    :root{
+        --drift: 0.15em;
+    }
+
     *:not(.math) {
-        font-family: Verdana;
+        font-family: Garamond;
     }
 
     .math {
@@ -17,6 +21,151 @@
 
     div.root{
         font-size: 10px;
+    }
+
+    div.math.spaced{
+        gap: 1em;
+    }
+    div.math.row{
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .math.opening, .math.closing{
+
+        font-size: 1.5em;
+
+    }
+    
+    .math.opening{
+        margin-right: 0.5em;
+    }
+
+    .math.closing{
+        margin-left: 0.5em;
+    }
+
+    .jostle{
+  
+        animation: hort 3s infinite,
+                   jostling 3s infinite;
+           
+              
+        animation-fill-mode: both, both;
+    
+          
+    }
+
+    @keyframes test{
+        0%, 100% {
+            color: black;
+        }
+        50% {
+            color: var(--color-t);
+        }
+
+    }
+
+   @keyframes hor {
+        0% {
+            transform: translate(--drift, --drift);
+           
+
+        }
+        100% {
+            transform: translate(0em, 0em);
+        
+     
+        }
+
+        
+   }
+
+   
+   @keyframes vert {
+        0% {
+            transform: translateY(--drift);
+           
+         
+
+        }
+        100% {
+            transform: translateY(0em);
+        
+     
+        }
+
+        
+        }
+
+        
+    @keyframes hort {
+        0% {
+            padding-left: var(--drift);
+            padding-right: 0em;
+         
+
+        }
+        50% {
+            padding-left: 0em;
+            padding-right: var(--drift);
+     
+        }
+        100% {
+            padding-left: var(--drift);
+            padding-right: 0em;
+     
+        }
+        
+     }
+        
+    @keyframes jostling {
+        0% {
+            padding-top: var(--drift);
+            padding-bottom: 0em;
+         
+
+        }
+        50% {
+            padding-top: 0em;
+            padding-bottom:  var(--drift);
+     
+        }
+        100% {
+            padding-top: var(--drift);
+            padding-bottom: 0em;
+         
+
+        }
+
+
+        
+    }
+
+    #shrink  {
+        font-size: 1em;
+        animation: shrink 3s infinite;
+        animation-fill-mode: both;
+        animation-direction: alternate;
+    }
+
+     @keyframes shrink {
+        0% {
+            font-size: 1em;
+         
+
+        }
+     
+        100% {
+            font-size: 0em;
+
+         
+
+        }
+
+
+        
     }
     
   </style>

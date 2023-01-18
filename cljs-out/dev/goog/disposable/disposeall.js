@@ -1,26 +1,12 @@
-/**
- * @license
- * Copyright The Closure Library Authors.
- * SPDX-License-Identifier: Apache-2.0
- */
+/*TRANSPILED*/goog.loadModule(function(exports) {'use strict';/*
 
-/**
- * @fileoverview The disposeAll method is used to clean up references and
- * resources.
- */
-
-goog.module('goog.disposeAll');
+ Copyright The Closure Library Authors.
+ SPDX-License-Identifier: Apache-2.0
+*/
+'use strict';
+goog.module("goog.disposeAll");
 goog.module.declareLegacyNamespace();
-
-const dispose = goog.require('goog.dispose');
-
-/**
- * Calls `dispose` on each member of the list that supports it. (If the
- * member is an ArrayLike, then `goog.disposeAll()` will be called
- * recursively on each of its members.) If the member is not an object with a
- * `dispose()` method, then it is ignored.
- * @param {...*} var_args The list.
- */
+const dispose = goog.require("goog.dispose");
 function disposeAll(var_args) {
   for (let i = 0, len = arguments.length; i < len; ++i) {
     const disposable = arguments[i];
@@ -32,3 +18,5 @@ function disposeAll(var_args) {
   }
 }
 exports = disposeAll;
+
+;return exports;});
