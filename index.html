@@ -11,7 +11,13 @@
         --drift: 0.15em;
     }
 
-    *:not(.math) {
+    html, body{
+        height: 100%;
+        width: 100%;
+     
+    }
+
+    * {
         font-family: Garamond;
     }
 
@@ -20,7 +26,7 @@
     }
 
     div.root{
-        font-size: 10px;
+        font-size: 15px;
     }
 
     div.math.spaced{
@@ -30,6 +36,7 @@
         display: flex;
         flex-direction: row;
         align-items: center;
+        text-align: center;
     }
 
     .math.opening, .math.closing{
@@ -48,124 +55,82 @@
 
     .jostle{
   
-        animation: hort 3s infinite,
-                   jostling 3s infinite;
+        animation: jostle-h 1.5s infinite,
+                   jostle-v 1.5s infinite;
            
-              
+        animation-direction: alternate;
         animation-fill-mode: both, both;
     
           
     }
 
-    @keyframes test{
-        0%, 100% {
-            color: black;
-        }
-        50% {
-            color: var(--color-t);
-        }
+    .paused {
+        animation-play-state: paused;
 
     }
 
-   @keyframes hor {
-        0% {
-            transform: translate(--drift, --drift);
-           
+    :not(.paused){
+        animation-play-state: running;
+    }
 
-        }
-        100% {
-            transform: translate(0em, 0em);
-        
-     
-        }
-
-        
-   }
-
-   
-   @keyframes vert {
-        0% {
-            transform: translateY(--drift);
-           
-         
-
-        }
-        100% {
-            transform: translateY(0em);
-        
-     
-        }
-
-        
-        }
-
-        
-    @keyframes hort {
+    @keyframes jostle-h {
         0% {
             padding-left: var(--drift);
             padding-right: 0em;
          
 
         }
-        50% {
+        100% {
             padding-left: 0em;
             padding-right: var(--drift);
      
         }
-        100% {
-            padding-left: var(--drift);
-            padding-right: 0em;
-     
-        }
-        
+
      }
-        
-    @keyframes jostling {
+
+    
+    @keyframes jostle-v {
         0% {
             padding-top: var(--drift);
             padding-bottom: 0em;
-         
-
         }
-        50% {
+      
+        100% {
             padding-top: 0em;
-            padding-bottom:  var(--drift);
-     
+            padding-bottom:  var(--drift);  
         }
-        100% {
-            padding-top: var(--drift);
-            padding-bottom: 0em;
-         
-
-        }
-
-
         
     }
 
-    #shrink  {
-        font-size: 1em;
-        animation: shrink 3s infinite;
-        animation-fill-mode: both;
-        animation-direction: alternate;
+    .focused{
+        border: 0.2em solid red;
     }
 
-     @keyframes shrink {
+    @keyframes focus {
         0% {
-            font-size: 1em;
-         
-
+            border: nil;  
         }
      
         100% {
-            font-size: 0em;
-
-         
-
+            border: 0.2em solid red;
+       
         }
-
-
         
+    }
+
+    .off-screen{
+        animation: enter 4000ms;
+        animation-fill-mode: forward;
+    }
+
+    @keyframes enter {
+        0%{
+            transform: translate(-50%, -30%);
+     
+        }
+        100%{
+            transform: translate(0%, 0%);
+        }
     }
     
   </style>

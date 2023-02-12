@@ -1,11 +1,17 @@
 (ns ^:figwheel-hooks blog.core
   (:require
-
-   [re-frame.core :as rf]
+   
+   [blog.render :refer [math-display]]
 
    [cljs.repl :refer [source]]
-   [cljsjs.waypoints]
+   [cljs.pprint :refer [pprint]]
 
+   [cljs.core.async :as a]
+   [clojure.zip :as z]
+
+   [com.rpl.specter :as s]
+
+   [re-frame.core :as rf]
    
    [goog.dom :as gdom]
    [goog.string :as gstring]
@@ -13,8 +19,9 @@
    [reagent.dom :as rdom]))
 
 
+
 ;;################################################################
-;; Re-Frame
+;; Utilities
 ;;################################################################
 
 (defn <sub
@@ -25,46 +32,18 @@
   [params]
   (rf/dispatch params))
 
+(defn $
+
+  ([style]
+   {:style style})
+
+  ([attrs style]
+   (assoc attrs :style style)))
+
 
 ;;################################################################
 ;; Scrolling
 ;;################################################################
-
-
-
-(defn set-scroll
-
-  "Sets some action for when
-   a particular element hits
-   the viewport."
-
-  [id f]
-  
-  (let [element (.getElementById js/document id)
-        params {:element element
-                :handler f
-                :offset "25%"}]
-    
-    (js/Waypoint. (clj->js params))))
-
-(defmulti on-scroll
-  
-  (fn [event-id dir params]
-    
-    [event-id (keyword dir)]))
-
-(defmethod on-scroll :default
-  [id dir _]
-  (println (str  "Scrolled: " id " " dir)))
-
-
-(defmethod on-scroll [:a-root :down]
-  [_ _ _]
-  (println "A scrolled down!"))
-
-(defmethod on-scroll [:b :up]
-  [_ _ _]
-  (println "B scrolled up!"))
 
 
 (rf/reg-event-db
@@ -91,302 +70,103 @@
  :<- [:focus-id]
  
  (fn [focus-id [_ id]]
-   
+
    (= id focus-id)))
 
 
 
-(defn add-scroll
+(defn init-scroll
+
+  [node ctx]
+
+  (letfn [(get-el-in-window []
+            
+            (.elementFromPoint js/document 50 200))
+          
+          (set-focus-on []
+            
+            (let [id (.-id (get-el-in-window))]
+              
+              (when (not= id "")
   
-  [id ctx element]
-
-  (fn [id ctx element]
-    
-    (reagent/create-class
+                (>evt [:set-focus id ctx]))))]
      
-     {:component-did-mount
-      (fn [this]
-        (when (= :root ctx)
-          (set-scroll (str id) (fn [dir]
-                                 (>evt [:set-focus id ctx])
-                                 (on-scroll (keyword id) dir nil)))))
+    (.addEventListener js/document "scroll" set-focus-on)))
 
-      
-      :reagent-render
-      (fn [id ctx element]
+
+(defn track-scrolling!
+  [ctx]
+  (letfn [(get-el-in-window []
+            
+            (.elementFromPoint js/document 50 300))]
+
+    (fn []
+      (let [id (.-id (get-el-in-window))]
         
-        [:div {:id id
-               :style {:border (when (<sub [:in-focus? id])
-                                 (println (str "In focus: " id))
-                                 "0.2em solid red")
-                       :padding "1em 1em 1em 1em"
-                       }}
-         element])})))
+        (when (not= id "")
+          
+          (>evt [:set-focus id ctx]))))))
 
-(declare gen-sym)
-(defn add-scrolls
+
+(defn add-text
+  [id element]
+  
+  (fn [id element]
+    
+    [:div {:id id
+           :style {:padding "1em 1em 1em 1em"}
+           :class #{(when (<sub [:in-focus? id])
+                      "focused")
+                    }}
+     
+     element]))
+
+
+(defn render-essay-text
   
   [ctx]
 
-  (reagent/create-class
+  (let [ts! (track-scrolling! ctx)]
 
-   {:component-will-unmount
-    
-    (fn [_]
-      (>evt [:set-focus nil ctx]))
-    
-    :reagent-render
-    
-    (fn [ctx]
-      [:div {:style {:height "150em"
-                     :padding-top "1em"
-                     }}
+    (reagent/create-class
 
-       [gen-sym]
+     {:component-did-mount
+      (fn [this]
+        (js/document.addEventListener  "scroll" ts!))
 
-       [add-scroll "Title" ctx [:h2 "Demo"]]
-       [add-scroll "a" ctx [:div "1) Action 1"]]
-       [add-scroll "b" ctx [:div "2) Action 2"]]
-       [add-scroll "c" ctx [:div "3) Action 3"]]])}))
+      :component-will-unmount
+      (fn [this]
+        (js/document.removeEventListener "scroll" ts!))
+      
+      :reagent-render
 
-;;################################################################
-;; Symbols
-;;################################################################
+      (fn [ctx]
 
+        (into
+         
+         [:div {:style {:min-height "150em"
+                        :padding-top "1em"}}
 
-(defn sym
-  [kw]
-  (gstring/unescapeEntities (str "&" (name kw) ";")))
+       
+          [add-text "Title"  [:h2 "Demo"]]
 
-#_(sym :nexist)
+          [add-text "Disclaimer"
+           "To the right one sees a meaningless array of symbols drifting like pollen in bile. In an effort to appear profound, I have made myself look all the more mathematically illiterate."]
 
-(defn row
-  [& args]
-  (into [:div.math.row] args))
+          [add-text "Lemons"
 
-(defn $
+           "What is this a demo of? In a word, incompetence. Now, for some enumerated gibberish:"]]
+         
+         (for [i (range 20)]
 
-  ([style]
-   {:style style})
+           (let [i (inc i)
+                 id (str "par-" i)
+                 text (apply str i ") "(take 10 (repeat "stunning prose attempt...")))]
 
-  ([attrs style]
-   (assoc attrs :style style)))
-
-(declare render)
-
-(defmulti -render :render-tag)
-
-(defn add-jostle
-  [el]
-  [:div.jostle ($ {:animationend #(println "Done")}
-                  {:--color-t "red"
-                   :animation-delay (str (* 2 (rand)) "s")}) el])
-
-(defmethod -render :default
-  [{:keys [text]}]
-  (add-jostle [:div.math text]))
-
-(defmethod -render :equation
-  [{:keys [text nodes]}]
-
-  (into
-
-   [:div.math.row.spaced]
-
-   (for [n nodes]
-     ^{:key n} [render n])))
-
-(defmethod -render :bracket
-  [{:keys [text nodes]}]
-
-  (let [border "0.1em solid black"
-        h "1.5em"
-        w "0.1em"
-        start [:div {:style {:border-left border
-                             :border-top border
-                             :border-bottom border
-                             :width w
-                             :height h}}]
-
-        end [:div {:style {:border-right border
-                           :border-top border
-                           :border-bottom border
-                           :height h
-                           :width w}}]
-
-        container [:div.math.row
-                   ($ {:justify-items "even-spacing"})
-                   start]
-
-        innards (for [n nodes]
-                  ^{:key n} [render n])]
-
-    (conj (into container innards) end)))
-
-(defmethod -render :fraction
-  [{:keys [num den]}]
-
-  (into
-   
-   [:div {:style {:display "inline-flex"
-                  :flex-direction "column"
-                  :justify-content "center"
-                  :align-items "center"
-                  :text-align "center"}}
-
-    [:div {:style {:font-size "0.75em" :padding "0em 1em 0em"} } [render num]]
-    [:hr {:style {:width "100%" :font-size "0.5em"}}]
-    [:div {:style {:font-size "0.75em" :padding "0em 1em 0em"} } [render den]]]))
-
-(defmethod -render :derivative
-  [{:keys [num den partial?]}]
-
-  (let [d (if partial?
-            (sym :part)
-            "d")]
-
-    (into
-     
-     [:div {:style {:display "inline-flex"
-                    :flex-direction "column"
-                    :justify-content "center"
-                    :align-items "center"
-                    :text-align "center"}}
-
-      [:div {:style {:font-size "0.75em"
-                     :padding "0em 1em 0em"
-                     :display "flex"
-                     :flex-direction "row"} }
-       (add-jostle d)
-       [render num]]
-      [:hr {:style {:width "100%" :font-size "0.5em"}}]
-      [:div {:style {:font-size "0.75em"
-                     :padding "0em 1em 0em"
-                     :display "flex"
-                     :flex-direction "row"} }
-       (add-jostle d)
-       [render den]]])))
+             ^{:key i} [add-text id text]))))})))
 
 
 
-
-(defmethod -render :sym
-  [{:keys [key]}]
-  (println key)
-  [:div.math (add-jostle (sym key))])
-
-(defmethod -render :log
-  
-  [{:keys [arg]}]
-  
-  [row (add-jostle "log")
-
-   (add-jostle [:div.math.opening  "("])
-   [:div ($ {:font-size "0.75em"}) [render arg]]
-   (add-jostle [:div.math.closing  ")"])])
-
-
-
-(defmethod -render :integral
-  
-  [{:keys [body delta]}]
-  
-  [:div.math.row.spaced
-   
-   [:div ($ {:font-size "2em"}) (sym :int)]
-    [render body]
-   [row "d" [render delta]]])
-
-
-(defn render-exp
-  [node* exp]
-  
-  [row node*
-   [:div ($ {:font-size "0.75em"
-             :transform "translateY(-1.25em)"})
-    [render exp]]])
-
-
-(defn render-coef
-  [node* coef]
-  [:div ($ {:display "flex"
-            :flex-direction "row"})
-   [render coef] node*])
-
-(defn render
-  [{:keys [exp coef] :as node}
-   ]
-  (let [node* (-render node)
-        node* (if coef
-                (render-coef node* coef)
-                node*)]
-    (if exp
-      (render-exp node* exp)
-      node*)))
-
-
-
-(defn gen-sym
-  []
-  
-  
-  [:div.math ($ {:font-size "18px"
-                 ;; :font-family "Garamond"
-                 :margin-bottom "2em"})
-
-   [:div
-    
-    (render {:render-tag :bracket
-
-             :nodes [{:render-tag :integral
-                      :delta {:render-tag :oop
-                              :text "x"}
-                      :body
-                      {:render-tag :equation
-                       :nodes
-
-                       [{:render-tag :sym
-                         :key :pi}
-                        
-                        {:render-tag :op
-                         :text '+}
-                        
-                        {:render-tag :log
-                         :arg
-                         {:render-tag :equation
-
-                          :nodes [{:render-tag :sym
-                                   :coef {:render-tag :default
-                                          :text 3
-                                          }
-                                   :key :lambda
-                                   :exp {:render-tag :fraction
-                                         :num {:text 14}
-                                         :den {:text 15}}}
-
-                                  {:render-tag :op
-                                   :text '+}
-                                  
-                                  {:render-tag :fraction
-                                   :num {:render-tag :sym
-                                         :key :pi
-                                         :coef
-                                         {:render-tag :default
-                                          :text 10}}
-                                   :den {:render-tag :default
-                                         :text "2"}}
-
-                                  {:render-tag :op
-                                   :text '+}
-
-                                  {:render-tag :derivative
-                                   :partial? true
-                                   :num {:render-tag :default
-                                         :text 'y}
-                                   :den
-
-                                   {:render-tag :default
-                                    :text 'x}}]}}]}}]})]])
 
 
 
@@ -394,8 +174,6 @@
 ;;################################################################
 ;; Re-Frame
 ;;################################################################
-
-
 
 (rf/reg-event-db
 
@@ -468,7 +246,6 @@
                   :gap "3%"
                   :justify-content "flex-start"
                   :align-items "flex-end"
-                  :font-family "Verdana"
 
                   :border-bottom "solid 0.2em black"
                   :padding "1em 1.5em 1em 1.5em"}}
@@ -495,6 +272,12 @@
     
     (into row cols)))
 
+(rf/reg-sub
+
+ :text
+
+ (fn [{:keys [text]} _]
+   text))
 
 (defmethod render-page :tab/about
   [_ ctx]
@@ -504,7 +287,19 @@
 (defmethod render-page :essay-text-col
   [_ ctx]
   [:div {:style {:padding "1em 1em 1em 1em"}}
-   [add-scrolls ctx]])
+   [render-essay-text ctx]])
+
+
+ #_(comment
+      ;; Re-rendering whole website
+      [render-page :main-page (keyword (str (name ctx) "-1"))]
+      [:div {:height "500px"
+             :width "500px"
+             :display "inline-block"
+             :style {:border "0.1em solid black"
+                     ;; :position "sticky"
+                     }}])
+
 
 (defmethod render-page :essay-display-col
   [_ ctx]
@@ -516,13 +311,7 @@
                   :width (str (* 0.8 70) "%")
                   :position "sticky"}}
 
-    [render-page :main-page (keyword (str (name ctx) "-1"))]]
-   #_[:div {:height "500px"
-            :width "500px"
-            :display "inline-block"
-            :style {:border "0.1em solid black"
-                    ;; :position "sticky"
-                    }}]])
+    [math-display]]])
 
 (defmethod render-page :tab/essays
   [_ ctx]
@@ -583,6 +372,8 @@
   [:div "There is no value in contacting me."])
 
 
+
+
 (defmethod render-page :page-body
   [_ ctx]
   
@@ -631,6 +422,7 @@
 ;;################################################################
 
 
+
 (defn mount [el]
   (rdom/render [main-page] el))
 
@@ -643,13 +435,979 @@
 
 ;; conditionally start your application based on the presence of an "app" element
 ;; this is particularly helpful for testing this ns without launching the app
+
+
 (init-db)
 (mount-app-element)
 
+
 ;; specify reload hook with ^:after-load metadata
 (defn ^:after-load on-reload []
-  (mount-app-element)
-  ;; optionally touch your app-state to force rerendering depending on
-  ;; your application
-  ;; (swap! app-state update-in [:__figwheel_counter] inc)
-)
+  ;;(init-scroll)
+  (mount-app-element))
+
+
+
+
+
+
+;;################################################################
+;; Event Zipper
+;;################################################################
+
+(def script
+
+  [{:text "Jowls"
+    :time 1000}
+
+   {:children [:nodes]
+    :nodes
+    
+    [{:text "Yams"
+      :time 1400}
+     {:text "Lemons"
+      :time 2000}
+     (fn []
+       [{:text "===="
+         :time 1400
+         }
+        {:text "In function!"
+         :time 3000}])]}
+   {:text "Eggs"
+    :time 500}
+   {:text "Done"
+    :time 300}])
+
+(defn gen-schedule
+  [script]
+  (letfn [(branch? [node]
+            (or (vector? node)
+                (:children node)))
+          
+          (children [node]
+            (if (vector? node)
+              node
+              (map node (:children node))))
+          
+          (make-node [node children]
+            (if (map? node)
+              (merge node (zipmap (:children node) children))
+              (with-meta (vec children) (meta node))))]
+    
+    (z/zipper branch? children make-node script)))
+
+(def events
+  (a/chan))
+
+
+(def process-queue
+  (cljs.core/atom #queue []))
+
+(defn get-next-process
+  []
+  (when-let [p (peek @process-queue)]
+    (swap! process-queue pop)
+    p))
+          
+
+(defmulti update-schedule
+  (fn [{:keys [tag]} _ _]
+    tag)) 
+
+(defmethod update-schedule :default
+  [_ s env]
+  [s env]) 
+
+(defn at-top?
+  [s]
+  (nil? (:path s)))
+
+(defmethod update-schedule :init-process
+  
+  [{:keys [ast]} s env]
+  
+  (let [s (cond
+
+            (nil? s)
+            (gen-schedule ast)
+
+            (at-top? s)
+            (z/edit s (fn [node] [ast node]))
+
+            :else
+            (z/left (z/insert-left s ast)))]
+
+    [s  env]))
+
+(defmethod update-schedule :coroutine
+  
+  [ast s env]
+  
+  (let [{:keys [run routines]} ast
+
+        routines (mapv (fn [[k v]]
+                         (let [loc  (gen-schedule v)]
+                           [k (vary-meta loc merge {:routine-key k})]))
+                         routines)
+
+        routines (into {} routines)
+
+        _ (println routines)
+        
+          routines (conj routines {:main s})
+
+         
+          env (update env :processes merge routines)]
+
+ 
+      [(run routines)  env nil]))
+
+(defmulti execute-schedule
+  
+  (fn [s env]
+    
+    (cond
+      (nil? s) :nil?
+      (z/end? s) :end?
+      (z/branch? s) :branch?
+      (fn? (z/node s)) :fn?)))
+
+
+(defmulti ast->db
+  (fn [{:keys [tag]} _]
+    tag))
+
+(defmethod ast->db :default
+  [ast _]
+  ast)
+
+
+
+(rf/reg-event-db
+
+ :db-update
+
+ (fn [db [_ ast]]
+   
+   (let [db* (ast->db ast db)]
+     
+     (merge db db*))))
+
+
+
+(defmethod execute-schedule :default
+  
+  [s env]
+
+
+  (cond
+
+
+    (= :yield (:tag (z/node s)))
+    (let [{:keys [to]} (z/node s)
+
+          r (:routine-key (meta s))
+          
+          env (update env :processes merge {r (z/next s)})
+          s (get-in env [:processes to])]
+      
+      [s env 0])
+
+    :else
+
+    (let [node (z/node s)]
+      
+      (>evt [:db-update node])
+      
+      [(z/next s) env (:time node)])))
+
+
+(defmethod execute-schedule :end?
+  [s env]
+  [nil env 1000])
+
+(defmethod execute-schedule :nil?
+  [s env]
+  [s env 1000])
+
+(defmethod execute-schedule :branch?
+  [s env]
+  [(z/down s) env 0])
+
+
+(defmethod execute-schedule :fn?
+  [s env]
+  [(z/edit s (fn [f] (f))) env nil])
+
+
+
+
+(defn run-scheduler
+  
+  []
+  
+  (a/go-loop [s nil
+              env {}]
+
+    (let [[s env time] (if-let [p (get-next-process)]
+                         (update-schedule p s env)
+                         (execute-schedule s env))]
+
+      (when time
+        (a/<! (a/timeout time)))
+      
+      (recur s env))))
+
+
+
+(defmulti gen-process-ast
+  (fn [{:keys [tag]}]
+    tag))
+
+(defmethod gen-process-ast :default
+  [{ast :ast}]
+  {:tag :init-process
+   :id (gensym)
+   :ast ast})
+
+(defmethod gen-process-ast :coroutine
+  [_]
+  
+  {:tag :coroutine
+   :run :first
+   :routines {:first [{:text "Thread 1: A"
+                       :time 1000}
+                      
+                      {:text "Thread 1: B"
+                       :time 1000}
+                      
+                      {:tag :yield
+                       :to :second}
+
+                      {:children [:temp :nodes]
+                       :temp [{:text "eggs"
+                               :time 1000}
+                              
+                              {:tag :yield
+                               :to :second}]
+                       :nodes
+                       [{:text  "Thread 1: C"
+                         :time 1000}
+                        
+                        {:text  "Thread 1: D"
+                         :time 1000}]}
+
+                     {:tag :yield
+                       :to :main}]
+
+              :second [{:text "Thread 2: A"
+                        :time 1000}
+                       
+                       {:children [:nodes]
+                        :nodes [{:text "Thread 2: B"
+                                 :time 1000}
+                                {:tag :yield
+                                 :to :third}]}
+                      
+                      {:tag :yield
+                       :to :first}
+
+                      {:text  "Thread 2: C"
+                       :time 1000}
+                       
+                      {:text  "Thread 2: D"
+                       :time 1000}
+
+                      {:tag :yield
+                       :to :first}]
+
+              :third [{:text "Third"
+                       :time 1000}
+                      {:tag :yield
+                       :to :second}]}})
+
+
+(rf/reg-fx
+
+ :add-to-process-queue!
+
+ (fn [ast]
+
+   (swap! process-queue conj ast)))
+
+(rf/reg-event-fx
+
+ :schedule
+
+ (fn [_ [_ params]]
+
+   (let [ast (gen-process-ast params)]
+     
+     {:add-to-process-queue! ast})))
+
+(run-scheduler)
+
+(def script*
+  [{:text "Yaaaa"
+    :time 5000}
+   {:text "Yeet"
+    :time 3000}])
+
+
+
+
+;;################################################################
+;; State Zipper
+;;################################################################
+
+
+#_(defn state-zip
+  [ast env]
+  (letfn [(branch? [node]
+            (:nodes node))
+          (children [node]
+            (s/select [(s/keys (:children node)) s/MAP-VALS] node))
+          (make-node [node children]
+            (swap! env apply merge (map (fn [{:keys [id] :as node}]
+                                    {id node})
+                                  children))
+            node)]))
+
+(defn branch?
+  [node]
+  (:nodes node))
+
+(defn children
+  [node]
+  (:nodes node))
+
+(defn state-zip
+  
+  [ast env]
+
+  (letfn [(*branch? [node]
+            (branch? node))
+          
+          (*children [node]
+            (vals (select-keys @env (children node))))
+
+          (index [data nodes]
+            (->> nodes
+                 (map (fn [node] {(:id node) node}))
+                 (apply merge data)))
+          
+          (make-node [node children]
+            (swap! env index children)
+            node)]
+
+    (z/zipper *branch?
+              *children
+              make-node
+              ast)))
+
+(def counter (atom 0))
+
+
+(defn walk
+  
+  [root data env f]
+  
+  (let [;;root (assoc data :Root {:nodes [root]})
+        data (cljs.core/atom data)]
+
+    (loop [loc (state-zip {:nodes [root]}  data)]
+     
+      (if (z/end? loc)
+        
+        @data
+        
+        (recur (z/next (z/edit loc f)))))))
+
+
+(def data
+  {:root {:id :root
+          :nodes [:a :b]}
+   :a {:id :a
+       :nodes [:c]}
+   :b {:id :b}
+   :c {:id :c}})
+
+(def t
+  {:id :root
+   :nodes [:a :b]})
+
+
+;;################################################################
+;; Div
+;;################################################################
+
+(def global-state
+  (cljs.core/atom {::copy {}
+                   :root (atom {:text "root"
+                                 :nodes [:a :b]})
+                    :a (atom {:text "a"})
+                    :b (atom {:text "b"})
+                    :c (atom {:text "c"})
+                    :d (atom {:text "d" :nodes [:a :e]})
+                    :e (atom {:text "Antelope"})}))
+
+
+(declare merge!)
+
+(rf/reg-fx
+
+ :data->dom!
+
+ (fn [data*]
+
+   
+   (merge! data*)))
+
+(rf/reg-fx
+
+ :block-event-loop!
+
+ (fn [data*]
+
+   (a/go
+     (a/<! (a/timeout 1000))
+     (println "Done"))))
+
+(defn update-db-dom-data
+  [db data*]
+  (update db :dom merge data*))
+
+(rf/reg-event-fx
+
+ :update-data
+
+ 
+ (fn [{:keys [db]} [_ data*]]
+
+   {:db (update-db-dom-data db data*)
+    :data->dom! data*
+    :block-event-loop! data*}))
+
+
+(defn add!
+  [id data]
+  (swap! global-state assoc-in [::copy id] data)
+  (swap! global-state assoc id (atom data))
+  nil)
+
+(defn remove!
+  [id data]
+  (swap! global-state dissoc id)
+  nil)
+
+(defn update!
+  [id f]
+  #_(swap! global-state update-in [::copy id] (fn [node]
+                                              (f node)))
+  (swap! global-state update id (fn [node]
+                                  (swap! node f)
+                                  node))
+  nil)
+
+
+(defn merge!
+  [map]
+  (doseq [[k v] map]
+    (update! k (fn [_] (println k) v))))
+
+
+
+
+
+
+
+
+
+(def prefix
+  (cljs.core/atom ""))
+
+(defn global-state*
+
+  ([]
+   (global-state* :root))
+  
+  ([id]
+   (let [state (@global-state id)]
+     
+     (reagent.core/create-class
+      
+      {:component-did-mount
+       (fn [_]
+         (println "mounted " id))
+
+       :component-did-update
+       (fn [_]
+         (println (str "updated " id)))
+
+       :component-will-unmount
+       (fn [_]
+         (println (str "will unmount " id)))
+
+       :reagent-render
+       (fn [_]
+ 
+         (let [{:keys [style text nodes close]} @state]
+
+           (conj
+            
+            [:div {:style (assoc style
+                                 :display "flex"
+                                 :flex-direction "column"
+                               ;;  :position "relative"
+                                 ;; :fit-content true
+                                 :font-size (when close
+                                              "0em")
+                                    :transition "2000ms")
+                   
+                   :data-before "("
+                   :data-color "red"} ]
+
+            (into
+
+             [:div {:class []
+                    :style (merge (when close
+                                    {:font-size "0em"
+                                     ;;:padding-left "50em"
+                                    ;; :padding-right "50em"
+                                     })
+
+                                  {:vertical-align "center"
+                                   :display "inline-block"
+                                           :position "relative"
+                                   ;;:justify-content "center"
+                                   :transition "2000ms"})}
+
+              (str @prefix " " text)]
+             
+             (for [n nodes]
+               
+               ^{:key n} [global-state* n])))))}))))
+
+
+(defn set-scroll*
+
+  "Sets some action for when
+   a particular element hits
+   the viewport."
+
+  [id f]
+  
+  (let [element (.getElementById js/document id)
+        params {:element element
+                :handler f
+                :offset "25%"}]
+    
+    (js/Waypoint. (clj->js params))))
+
+(declare essay)
+
+(def essay-data
+  (cljs.core/atom {:focus nil}))
+
+(defn update!!
+  [id f & args]
+  #_(swap! global-state update-in [::copy id] (fn [node]
+                                              (f node)))
+  (swap! essay-data update id (fn [node]
+                                  (apply swap! node f args)
+                                  node))
+  nil)
+
+(declare render-essay*
+         essay->data)
+
+(defn render-essay
+  [essay]
+  (let [data (essay->data essay)
+        id (s/select-one [s/LAST s/MAP-VALS s/ATOM :id] data)]
+   
+    (swap! essay-data  (fn [essay-data data] (apply  merge essay-data data)) data)
+    [render-essay* id]))
+
+(defn merge!!
+  [map]
+  (doseq [[k v] map]
+    (update!! k (fn [_] (println k) v))))
+
+(defn render-essay*
+  
+  
+  [id]
+  
+  (let [id-enter  (str id "-enter")
+        id-exit (str id "-exit")
+        
+        div-enter [:div {:id id-enter}]
+        div-exit [:div {:id id-exit}]
+      
+        {:keys [event] :as data} (deref (id @essay-data))]
+
+    (fn [id]
+      
+      (reagent.core/create-class
+       
+       {:component-did-update
+        (fn [_]
+          #_(println (str id " updated.")))
+        
+        :component-did-mount
+        (fn [_]
+
+          (set-scroll* id
+                       (fn []
+                         (when (:token? data)
+                           
+                           (let [focused-id (:focus @essay-data)
+                                 ]
+                             
+                             (when focused-id
+                               (update!! focused-id (fn [node]
+                                                      (-> node
+                                                          (assoc-in [:params :style :transition] "1000ms" )
+                                                          (assoc-in [:params :style :text-outline] nil)))))
+
+                             (update!! id (fn [node]
+                                            (-> node
+                                             (assoc-in [:params :style :transition] "1000ms" )
+                                                 (assoc-in [:params :style :text-outline] "1px red" ))
+                                            ))
+
+                             (swap! essay-data assoc :focus id))))))
+
+        :reagent-render
+        (fn [id]
+          (let [{:keys [tag params forms]} (deref (id @essay-data))]
+
+            (conj (into [tag params div-enter] forms) div-exit)))}))))
+
+
+
+(defn parseable-text?
+  [node]
+  (and (vector? node)
+       (not= :br (first node))))
+
+(defn parse-essay-on-descent
+  [node]
+   (if (parseable-text? node)
+     (let [[tag params & forms] node
+
+           [params forms] (if (map? params)
+                            [params forms]
+                            [{} (cons params forms)])
+
+           id (gensym "essay-")
+           
+           data (meta node)
+
+           token? (not (some parseable-text? forms))]
+
+       (merge
+        
+        {:tag tag
+         :token? token?
+         :params (assoc  params :id id)
+         :id id
+         :forms forms}
+
+        data))
+     node))
+
+
+
+
+
+(def ESSAY
+  (s/recursive-path [prewalk-f] p
+                    (s/if-path parseable-text?
+                               [(s/view prewalk-f) (s/continue-then-stay :forms s/ALL p)]
+                               s/STAY)))
+(defn parse-essay
+  [essay]
+
+  (s/transform (ESSAY parse-essay-on-descent)
+               identity ;;parse-essay-on-ascent
+               essay))
+
+(def ESSAY-PARSED
+  (s/recursive-path [] p
+                    (s/if-path map?
+                               [(s/continue-then-stay :forms s/ALL p)]
+                               s/STAY)))
+(defn essay->data
+  [essay]
+  (s/select [(s/pred :forms)
+             ESSAY-PARSED
+             (s/view (fn [node]
+                       (when (map? node)
+                         {(:id node) (atom (update node :forms (fn [forms]
+                                                                 (map (fn [node]
+                                                                             (if-let [id (:id node)]
+                                                                               ^{:key id} [render-essay* id]
+                                                                               node))
+                                                                           forms))))})))
+             (s/pred (complement nil?))]
+            (parse-essay essay)))
+
+(def essay
+  (into
+   [:div {:style {:top "35vh"
+                  :height "1500px"
+
+                  :padding-top "1em"}}]
+
+
+   (for [i (range 1)]
+     ^{:key i}
+     [:div [:h1 "Linear Maps"]
+
+      ^{:event [:dom {:a 14}]}
+      [:div "A linear map is a transformation where..."]
+      [:br]
+      [:div {:style {:padding-top "1em"}}]
+      [:div "This means that they preserve vector addition and scalar multiplication."]
+      [:br]
+      [:div {:style {:padding-top "1em"}}]
+      
+      [:div "This means that they preserve vector addition and scalar multiplication."]
+      [:br]
+      [:div {:style {:padding-top "1em"}}]
+      
+      [:div "This means that they preserve vector addition and scalar multiplication."]
+      [:br]
+      [:div {:style {:padding-top "1em"}}]
+      [:div "This means that they preserve vector addition and scalar multiplication."]])))
+
+
+
+
+
+(defn log-event
+  
+  [id parent-id]
+  
+  (rf/reg-sub
+
+   id
+
+   :-> [parent-id]
+
+   (fn [parent [_ id]]
+     (println id)
+     (get parent id))))
+
+
+
+
+(def tree
+  {
+   :a 1
+   :b 2
+   :c {:children {:d 3 :e 4}}
+   
+   })
+
+(rf/reg-sub
+
+ :t-root
+
+ (fn [_ _]
+   
+   tree))
+
+(defn parse-tree
+
+  ([tree]
+   
+   (parse-tree :t-root tree))
+  
+  ([parent-id tree]
+   
+   (let [[k v] tree]
+     
+     (log-event tree parent-id)
+     
+     (when-let [{:keys [children]} v]
+       
+       (doseq [c children]
+         
+         (parse-tree k c))))))
+
+
+
+(defn tree-test
+  ([]
+   [:div "1"]
+   #_(parse-tree tree)
+   #_(tree-test :t-root))
+  
+  ([id]
+   (fn [id]
+     (let [data (<sub [id])
+           contents (if-let [{:keys [children]} data]
+                      (for [[k _] children]
+                        ^{:key k} [tree-test k])
+                      (second data))]
+       [:div contents]))))
+
+
+
+
+;;################################################################
+;; Nested Website Versions
+;;################################################################
+;;
+;; Shrinks current website to be analyzed by a superset.
+
+#_(defn render-world
+
+  [ i f]
+
+  (fn [i f]
+
+    (println i)
+    
+    [:div
+     [:div ($ {:height (str (/ 20 i) "vh")
+               :width (str (/ 100 i) "vh")
+               :transition "1000ms"})
+      "World"]
+
+     [:div ($ {:display "inline-block"})
+      [:div ($ {:display "inline-block"
+                ;; :transform (str "translate(" (/ 20 i) "vh, 0px)")
+                :width (str (/ 30 i) "vh")
+                :height (str (/ 80 i) "vh")
+                :border "1px solid black"
+                :transition "1000ms"})
+
+       [:button {:on-click f}]]
+
+      [:div ($ {:display "inline-block"
+              ;;  :transform (str "translate(" (/ 20 i) "vh, 0px)")
+                :width  (str ( / 70 i) "vh")
+                :height (str (/ 80 i) "vh")
+                :border "1px solid black"
+                :transition "1000ms"})]]]))
+
+(defn -scale
+  [r i]
+  (js/Math.pow r i))
+
+(defn scale
+  [r i]
+  (reduce +
+          (map (partial  -scale r)
+               (range i))))
+
+#_(defn render-world
+
+  [i n f]
+
+  (fn [i n f]
+
+    (let [y-scale (scale 0.3 (dec n))
+          x-scale (scale 0.2 (dec n))]
+
+      [:div ($ {:position "absolute"
+                :border "1px solid black;"
+                :height "50%"
+                :width "30%"
+                :transform (str "translate(" (* 100 x-scale)  "%, " (* 100 y-scale) "%)")
+                :transition "3000ms"})
+
+       [:div ($ {;;:position "absolute"
+            ;;    :transform (str "scale(" (-scale 0.8 n)  ", " (-scale 0.3 n) ")")
+                :transition "3000ms"})
+        [:button {:on-click f} (str  "Move Up to World " i)]]])
+
+    #_[:div ($ {:transform "translate(" (scale 0.3 n) "em, " (scale 0.8 n)  "em)"
+              :transition "1000ms"
+           ;;   :z-index i
+              })
+     
+     [:div ($ {:transform "scale(" (scale 0.3 n) "," (scale 0.8 n)  ")"
+               :transition "1000ms"
+               :display "flex"
+               :flex-direction "row"})
+
+      [:div #_($ {:height (str  200 "px")}) (str  "World " i)]
+
+      
+      [:div ($ {;;:display "inline-block"
+                ;; :width (str 30 "px")
+                ;;  :height (str 20 "px")
+                })
+
+       
+       [:button {:on-click f} "Move Up World"]]
+      [:div ($ {;;:display "inline-block"
+                :transform (str "translate(" 50 "%, 20%)")
+                ;; :width  (str 70 "px")
+                ;;  :height (str 20 "px")
+                :border "1px solid red"
+                :transition "1000ms"})
+
+       "Toast"]
+
+      ]]))
+
+(defn render-world
+  [i distance f]
+  (fn [i distance f]
+
+    
+    (println "distance")
+    (println (str "i: " i))
+    (println (str "distance: "  distance))
+
+    
+    (let [x-scale (* 100 (scale 0.3 distance))
+          y-scale (* 100 (scale 0.5 distance))
+          fs (str (js/Math.pow 0.75 (dec  distance)) "em")]
+      
+      [:div.off-screen
+       
+       [:div ($ {;;:position "absolute"
+                 :transform (str "translate(" x-scale "%, " y-scale "%)")
+                 ;;  :height "100%"
+                 :width (str (* 0.3 x-scale) "%")
+                 :height (str (* 0.5  y-scale) "%")
+                 :font-size  fs
+                 :transition "4000ms"
+                ;; :border "solid black 1px"
+                 })
+
+        [:div
+
+         #_($ {:transform "scale(" (-scale 0.3 distance) ", " (-scale 0.5 distance) ")"})
+         [:div "Current World: " i]
+         [:button {:on-click f}
+
+          [:div ($ {:font-size fs}) (str "Move Up to  World: " (inc i))]]]]])))
+
+(defmethod render-page :main-page*
+  [_ ctx]
+  (let [worlds (atom 1)
+       f  #(swap! worlds inc)]
+
+    (fn [_ ctx]
+
+      (let [n-worlds @worlds]
+        (into
+         [:div ($ {:height "1500px"
+                   :width "1500px"
+                   :font-size "1em"})]
+         
+         (for [i  (reverse (range 1 (inc n-worlds)))]
+
+           (do
+
+             (println i)
+             
+             ^{:key i} [render-world i (- n-worlds i) f])))))))
