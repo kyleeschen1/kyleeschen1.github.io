@@ -9,21 +9,152 @@
 
     :root{
         --drift: 0.15em;
+        --fontr: Helvetica;
+        --font: Garamond;
+        --background-color:  #1F2933;
+        --focus-color: #C62828;
+        --text-color: white;
+
+        --display-col-perc: 60%;
     }
 
     html, body{
-        height: 100%;
-        width: 100%;
+        background-color: var(--background-color);  
+        color: white;
+     
+    }
+ 
+    * {
+        font-family: var(--font);
+        background-opacity: 80%;
+        line-height: 2;
      
     }
 
-    * {
-        font-family: Garamond;
+
+    /* ----------------------------------------
+       Site Header 
+       ----------------------------------------- */
+    
+    .header {
+        background: var(--background-color);
+        z-index: 1;
+        opacity: 100%;
+        top: 0px;
+        position: sticky;
+        display: flex;
+        flex-direction: row;
+        gap: 3%;
+        justify-content: flex-start;
+        align-items: center;
+        border-bottom: solid 0.2em var(--text-color);
+        padding: 1em 1.5em 1em 1.5em;
     }
 
-    .math {
-        font-family: Garamond sans serif;
+    .header-name {
+        font-size: 1.5em;
+        font-weight: bold;
+        color: var(--text-color);
     }
+    
+        
+    .header-tab {    
+        color: var(--text-color);
+        font-size: 1em;
+        padding: none;
+        background: none;
+        border: none;
+    }
+
+    .header-tab:hover {
+        font-weight: bold;
+    }
+
+    .focused-header-tab {
+        color: var(--focus-color);
+        font-weight: bold;
+    }
+
+        
+    /* ----------------------------------------
+       Page Body
+       ----------------------------------------- */
+    
+    .page-body{
+        font-size: 1em;
+        margin: 3em 1em 1em 1em;
+    }
+
+    
+
+    /* ----------------------------------------
+       Tutorial
+       ----------------------------------------- */
+
+    .text-col{
+        padding: 1em 1em 1em 1em;
+    }
+
+    .display-col {
+        padding: 1em 1em 1em 1em;
+        position: fixed;
+        text-align: center;
+        justify-content: center;
+        width: var(--display-col-perc); 
+    }
+
+
+    
+    /* ----------------------------------------
+       Code 
+       ----------------------------------------- */
+
+    
+
+
+    /* ----------------------------------------
+       Math 
+       ----------------------------------------- */
+    
+    .math {
+        font-family: Garamond !important;
+        transform-style: preserve-3d;
+        position: relative;
+    }
+
+    .matrix {
+        display: inline-grid;
+        grid-column-gap: 0.25em;
+        grid-row-gap: 0.25em;
+        justify-items: center;
+        align-items: center;
+    }
+    
+    .fraction{
+        display: inline-flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        transform-style: preserve-3d;
+    }
+
+    .fraction-line {
+        width: 125%;
+        border-bottom: 0.1px solid var(--text-color);
+        text-align: center;
+    }
+
+    .fraction-component{
+        font-size: 0.75em;
+        padding: 0em 1em 0em;
+        transform-style: preserve-3d;
+    }
+
+    .numerator{
+       border-bottom: 0.1px solid var(--text-color);
+    }
+    
 
     div.root{
         font-size: 15px;
@@ -32,15 +163,15 @@
     div.math.spaced{
         gap: 1em;
     }
+    
     div.math.row{
         display: flex;
         flex-direction: row;
         align-items: center;
-        text-align: center;
+        text-align: center; 
     }
 
     .math.opening, .math.closing{
-
         font-size: 1.5em;
 
     }
@@ -52,86 +183,96 @@
     .math.closing{
         margin-left: 0.5em;
     }
+    
+    /* ----------------------------------------
+       Drift Animations
+       ----------------------------------------- */
 
-    .jostle{
-  
-        animation: jostle-h 1.5s infinite,
-                   jostle-v 1.5s infinite;
-           
+    @keyframes drift-x {
+        0% {
+            transform: translateX( var(--drift));
+        }     
+        100% {
+           transform: translateX(0em);
+ 
+        } 
+    }
+
+    
+    @keyframes drift-y {
+        0% {
+            transform: translateY(var(--drift));
+        }
+        100% {
+           transform: translateY(0em);
+ 
+        }
+    }
+
+
+
+    .drift-x {
+        animation: drift-x 1.5s infinite;
         animation-direction: alternate;
         animation-fill-mode: both, both;
-    
-          
     }
 
-    .paused {
-        animation-play-state: paused;
-
+    .drift-y {
+        animation: drift-y 1.5s infinite;          
+        animation-direction: alternate;
+        animation-fill-mode: both;        
     }
 
-    :not(.paused){
-        animation-play-state: running;
+
+    .preserve{
+        position: relative;
+        transform-style: preserve-3d;
     }
 
-    @keyframes jostle-h {
-        0% {
-            padding-left: var(--drift);
-            padding-right: 0em;
-         
-
-        }
-        100% {
-            padding-left: 0em;
-            padding-right: var(--drift);
-     
-        }
-
-     }
 
     
-    @keyframes jostle-v {
-        0% {
-            padding-top: var(--drift);
-            padding-bottom: 0em;
-        }
-      
-        100% {
-            padding-top: 0em;
-            padding-bottom:  var(--drift);  
-        }
-        
+    li {
+        margin-top: 1.5em;
+        margin-bottom: 1.5em;
+        padding-left: 1em;
     }
 
+
+    
+    /* ----------------------------------------
+       Focusing
+       ----------------------------------------- */
+
+    .text-col .text {
+        opacity: 30%;
+        transition-duration: 300ms;
+    }
+    
+    .text-col .focused {
+
+        opacity: 100% !important;
+    }
+
+    /*
+    .focused .text-focused {
+        color: var(--focus-color);
+        transition-duration: 300ms;
+        line-height: calc(3 * var(--line-height));
+ 
+    }
+   
     .focused{
-        border: 0.2em solid red;
-    }
 
-    @keyframes focus {
-        0% {
-            border: nil;  
-        }
-     
-        100% {
-            border: 0.2em solid red;
-       
-        }
         
-    }
+        border: 0.2em solid var(--focus-color);
+        line-height: calc(1.25 * var(--line-height));
+        transition-duration: 100ms;
+        border-radius: 1em;
+        font-size: 1.05em;
+        padding: 1em 1em 1em 1em;
+   
+    }*/
 
-    .off-screen{
-        animation: enter 4000ms;
-        animation-fill-mode: forward;
-    }
-
-    @keyframes enter {
-        0%{
-            transform: translate(-50%, -30%);
-     
-        }
-        100%{
-            transform: translate(0%, 0%);
-        }
-    }
     
   </style>
   

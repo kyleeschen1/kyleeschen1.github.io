@@ -1,52 +1,139 @@
 
 (ns ^:figwheel-hooks blog.render
   (:require
+   [blog.utils :refer [$]]
    [com.rpl.specter :as s]
+   [reagent.core :as reagent :refer [atom]]
    [goog.string :as gstring]))
 
 
 
 ;;################################################################
-;; Symbols
+;; Rendering
 ;;################################################################
-
 
 (defn sym
   [kw]
   (gstring/unescapeEntities (str "&" (name kw) ";")))
 
+(defn render-string
+  [s]
+  (case s
+    "\\" "\\"
+    "->" (sym :rarr)
+    "<-" (sym :larr)
+    ">>" (sym :Gt)
+    "<<" (sym :Lt)
+    "+" (sym :plus)
+    "," " ,"
+    s))
+
+(defn wrap-in-drift-divs
+  [div]
+
+   
+  [:div.drift-y ($ {:position "relative"
+                    :transform-style "preserve-3d"
+                    :animation-delay (str (* 2 (js/Math.random)) "s")})
+   
+   [:div.drift-x ($ {:position "relative"
+                     :transform-style "preserve-3d"
+                     :animation-delay (str (* 2 (js/Math.random)) "s")})
+    div]])
+
+(defn coords->trsl
+  
+  [{tx :tx  ty :ty tz :tz}]
+  
+  (let [tx (* 0.66 tx)
+        ty (* 2 ty)]
+    
+    (str "translate3d(" tx "em, " ty  "em, " (or  tz 0) "em)")))
+
+
+;;################################################################
+;; Render Multimethod
+;;################################################################
+
+(defmulti render :tag)
+
+(defmethod render :default
+  [{:keys [text]}]
+  (wrap-in-drift-divs
+   [:div text]))
+
+(defmethod render :root
+  [{:keys [nodes]}]
+  (into [:div]
+
+        (for [n nodes]
+          ^{:key (:id n)} [render n])))
+
+(defmethod render :delimiter
+  [ast]
+  (render (assoc ast :tag :token)))
+
+
+(defmethod render :token  
+  [{:keys [text] :as ast}]
+
+  (wrap-in-drift-divs
+   
+   [:div ($ {:position "absolute"
+             :transform (coords->trsl ast)})
+    
+    (render-string text)]))
+
+
+(defmethod render :branch
+  [{:keys [nodes] :as ast}]
+
+  
+  (into [:div ($ {:class "preserve"}
+                 {:position "relative"
+                  :transform (coords->trsl ast)})]
+        
+        (for [n nodes]
+          ^{:key (:id n)} [render n])))
+
+
+
+
+
 (defn row
   [& args]
-  (into [:div.math.row] args))
+  (into [:div.math.row ($ {:transform-style "preserve-3d"})] args))
 
-(defn $
+(declare render-exp render-coef)
 
-  ([style]
-   {:style style})
+(defn render*
+  [{:keys [exp coef] :as node}
+   ]
+  (let [node* (render node)
+        node* (if coef
+                (render-coef node* coef)
+                node*)]
+    (if exp
+      (render-exp node* exp)
+      node*)))
 
-  ([attrs style]
-   (assoc attrs :style style)))
+(defn render-exp
+  [node* exp]
+  
+  [row node*
+   [:div ($ {:font-size "0.75em"
+             :transform "translateY(-1.25em)"})
+    [render* exp]]])
 
-(declare render)
 
-(defmulti -render :render-tag)
+(defn render-coef
+  [node* coef]
+  [:div ($ {:display "flex"
+            :flex-direction "row"})
+   [render* coef] node*])
 
-(defn add-jostle
-  [el]
-  (let [
-        f (fn [el]
-            [:div ($ {
-                      :class ["jostle"]}
-                          {:text-align "center"
-                           :animation-delay (str (* 2 (rand)) "s")}) el])]
 
-    [f el]))
-
-(defmethod -render :default
-  [{:keys [text]}]
-  (add-jostle [:div.math text]))
-
-(defmethod -render :equation
+(defmethod render :equation
   [{:keys [text nodes]}]
 
   (into
@@ -54,42 +141,51 @@
    [:div.math.row.spaced]
 
    (for [n nodes]
-     ^{:key n} [render n])))
+     ^{:key n} [render* n])))
 
-(defmethod -render :bracket
+(defmethod render :bracket
+  
   [{:keys [text nodes]}]
 
-  (let [border "0.1em solid black"
+  (let [border "0.1em solid white"
         h "100%"
         w "0.1em"
-        start (add-jostle
+        start #_(add-jostle)
 
-               [:div {:style {:border-left border
-                              :border-top border
-                              :border-bottom border
-                              :width w
-                              :height h}}])
+        
+        [:div.drift-x
+         [:div.drift-y
+          {:style {:border-left border
+                   :border-top border
+                   :border-bottom border
+                   
+                   ;;  :position "relative"
+                   :text-align "center"
+                   :width w
+                   :height h}}]]
 
-        end (add-jostle
+        end [:div.drift-x
              [:div {:style {:border-right border
                             :border-top border
                             :border-bottom border
+                            ;; :position "relative"
                             :height h
-                            :width w}}])
+                            :width w}}]]
 
         container [:div.math
                    ($ {:justify-items "even-spacing"
-                       :display "inline-flex"})
+                       :display "inline-flex"
+                       :position "relative"})
                    start]
 
         innards (for [n nodes]
-                  ^{:key n} [render n])]
+                  ^{:key n} [render* n])]
 
     (conj (into container innards) end)))
 
 
 
-(defmethod -render :matrix
+(defmethod render :matrix
   
   [{:keys [dims nodes]}]
 
@@ -98,164 +194,107 @@
     (let [[rows cols] dims]
 
       (into
-       [:div ($ {:display "inline-grid"
-                 :grid-template-columns  (apply str (repeat cols "auto "))
-                 :grid-template-rows (apply str (repeat rows "auto ")) 
-                 :grid-column-gap "0.25em"
-                 :grid-row-gap "0.25em"
-                 :justify-items "center"
-                 :align-items "center"
-
-                 })]
+       [:div.matrix]
 
        (for [r (range 1 (inc rows))]
          
          (for [c (range 1 (inc cols))]
 
-           ^{:key [t? r c]}    [:div 
-
-                                
-                                
-
-                                ($ {:margin "0.25em 0.25em 0.255em 0.25em"
+           ^{:key [r c]}    [:div
+                              
+                                ($ {:margin "0.25em 0.25em 0.25em 0.25em"
                                     :grid-column-start c
                                     :grid-column-end c
                                     :grid-row-end r
-                                    :grid-row-start r
-                                    
-                                    :transition  "2000ms"})
+                                    :grid-row-start r})
 
                                 (if t?
-                                  [render (get-in nodes [c r])]
-                                  [render (get-in nodes [r c])])]))))))
+                                  [render* (get-in nodes [c r])]
+                                  [render* (get-in nodes [r c])])]))))))
 
 
 
-(defmethod -render :fraction
+
+(defmethod render :fraction
   [{:keys [num den]}]
 
-  (into
+  [:div.fraction
+ 
+
+   [:div.fraction-component.numerator
+    [render* num]]
+
+   #_[:div.fraction-line]
    
-   [:div {:style {:display "inline-flex"
-                  :flex-direction "column"
-                  :justify-content "center"
-                  :align-items "center"
-                  :text-align "center"
-                  }}
+   [:div.fraction-component
+    
+    [render* den]]])
 
-    [:div {:style {:font-size "0.75em"
-                   :padding "0em 1em 0em"
-                   :border-bottom "1px solid black"} }
-     [render num]]
+(defmethod render :differential
   
-    [:div {:style {:font-size "0.75em" :padding "0em 1em 0em"} } [render den]]]))
+  [{:keys [delta element]}]
+  
+  [row (wrap-in-drift-divs delta)
+   
+   [render* element]])
 
-(defmethod -render :derivative
+(defmethod render :derivative
   [{:keys [num den partial?]}]
 
   (let [d (if partial?
             (sym :part)
             "d")]
 
-    (into
-     
-     [:div {:style {:display "inline-flex"
-                    :flex-direction "column"
-                    :justify-content "center"
-                    :align-items "center"
-                   ;; :text-align "center"
-                    }}
-
-      [:div {:style {:font-size "0.75em"
-                   ;;  :padding "0em 1em 0em"
-                     :display "flex"
-                     :flex-direction "row"
-                     :border-bottom "1px solid black"} }
-       (add-jostle d)
-       [render num]]
-   
-      [:div {:style {:font-size "0.75em"
-                     :padding "0em 1em 0em"
-                     :display "flex"
-                     :flex-direction "row"
-                     :justify-content "center"
-                     :align-item "center"
-                     :text-align "center"} }
-       (add-jostle d)
-       [render den]]])))
+    (render {:tag :fraction
+             
+             :num {:tag :differential
+                   :delta d
+                   :element num}
+             
+             :den {:tag :differential
+                   :delta d
+                   :element num}})))
 
 
 
 
-(defmethod -render :sym
+(defmethod render :sym
   [{:keys [key]}]
-  (println key)
-  [:div.math (add-jostle (sym key))])
+  (wrap-in-drift-divs [:div (sym key)]))
 
-(defmethod -render :log
+(defmethod render :log
   
   [{:keys [arg]}]
   
-  [row (add-jostle "log")
+  [row (wrap-in-drift-divs [:div "log"])
 
-   (add-jostle [:div.math.opening  "("])
-   [:div ($ {:font-size "0.75em"}) [render arg]]
-   (add-jostle [:div.math.closing  ")"])])
+   (wrap-in-drift-divs [:div.math.opening  "("])
+   
+   [:div ($ {:font-size "0.75em"}) [render* arg]]
+   
+   (wrap-in-drift-divs [:div.math.closing  ")"])])
 
 
 
-(defmethod -render :integral
+(defmethod render :integral
   
   [{:keys [body delta]}]
   
-  [:div.math.row.spaced
+  [:div.math.row.spaced ($ {:transform-style "preserve-3d"
+                            :position "relative"})
    
-   (add-jostle [:div ($ {:font-size "2em"}) (sym :int)])
-    [render body]
-   [row "d" [render delta]]])
+   [wrap-in-drift-divs [:div ($ {:font-size "2em"}) (sym :int)]]
+   
+   [render* body]
+   
+   [row [wrap-in-drift-divs
+         [:div.preserve
+          [:div ($ {:transform "translate3d(0em, 0em, 10em)"
+                    :position "absolute"
+                    }) "d"]
+          [:div ($ {:opacity "0%"}) "d"]]]
+    [render* delta]]])
 
-
-(defn render-exp
-  [node* exp]
-  
-  [row node*
-   [:div ($ {:font-size "0.75em"
-             :transform "translateY(-1.25em)"})
-    [render exp]]])
-
-
-(defn render-coef
-  [node* coef]
-  [:div ($ {:display "flex"
-            :flex-direction "row"})
-   [render coef] node*])
-
-(defn render
-  [{:keys [exp coef] :as node}
-   ]
-  (let [node* (-render node)
-        node* (if coef
-                (render-coef node* coef)
-                node*)]
-    (if exp
-      (render-exp node* exp)
-      node*)))
-
-
-(defmulti parse
-  (fn [tag params]
-    tag))
-
-(defmethod parse :default
-  [_ {:keys [id form]}]
-  {:tag :default
-   :form form})
-
-(defmethod parse :matrix
-  [_ {:keys [rows brackets id]}]
-  {:tag :matrix
-   :rows rows
-   :id id})
 
 
 (defn math-display
@@ -266,86 +305,83 @@
   [:div.math ($ {:font-size "18px"
                  :margin-bottom "2em"})
 
-   [:div
-    
-    (render {:render-tag :bracket
+   (render {:tag :bracket
 
-             :nodes [{:render-tag :integral
-                      :delta {:render-tag :oop
-                              :text "x"}
-                      :body
-                      {:render-tag :equation
-                       :nodes
+            :nodes [{:tag :integral
+                     :delta {:tag :op
+                             :text "x"}
+                     :body
+                     {:tag :equation
+                      :nodes
 
-                       [{:render-tag :sym
-                         :key :pi}
-                        
-                        {:render-tag :op
-                         :text '+}
+                      [{:tag :sym
+                        :key :pi}
+                       
+                       {:tag :op
+                        :text '+}
 
-                        {:render-tag :bracket
-                         :nodes [{:render-tag :matrix
-                                  :dims [2 2]
-                                
-                                  :nodes {1 {1 
-                                              {:render-tag :derivative
-                                              :partial? true
-                                              :num {:render-tag :default
-                                                    :text 'y}
-                                              :den
+                       {:tag :bracket
+                        :nodes [{:tag :matrix
+                                 :dims [2 2]
+                                 
+                                 :nodes {1 {1 
+                                            {:tag :derivative
+                                             :partial? true
+                                             :num {:tag :default
+                                                   :text 'y}
+                                             :den {:tag :default
+                                                   :text 'w}}
+                                            2 {:tag :op
+                                               :text 3}}
+                                         2 {1 {:tag :op
+                                               :text 0}
+                                            2 
+                                            {:tag :derivative
+                                             :partial? true
+                                             :num {:tag :default
+                                                   :text 'y}
+                                             :den
 
-                                              {:render-tag :default                                                 :text 'w}}
-                                             2 {:render-tag :op
-                                                :text 3}}
-                                          2 {1 {:render-tag :op
-                                                :text 0}
-                                             2 
-                                             {:render-tag :derivative
-                                              :partial? true
-                                              :num {:render-tag :default
-                                                    :text 'y}
-                                              :den
+                                             {:tag :default
+                                              :text 'x}}}} }]}
 
-                                              {:render-tag :default                                                 :text 'x}}}}
+                       {:tag :op
+                        :text '+}
+                       
+                       {:tag :log
+                        :arg
+                        {:tag :equation
 
-                                  }]}
+                         :nodes [{:tag :sym
+                                  :coef {:tag :number
+                                         :text 3
+                                         }
+                                  :key :lambda
+                                  :exp {:tag :fraction
+                                        :num {:text 14}
+                                        :den {:text 15}}}
 
-                        {:render-tag :op
-                         :text '+}
-                        
-                        {:render-tag :log
-                         :arg
-                         {:render-tag :equation
+                                 {:tag :op
+                                  :text '+}
+                                 
+                                 {:tag :fraction
+                                  :num {:tag :sym
+                                        :key :pi
+                                        :coef
+                                        {:tag :default
+                                         :text 10}}
+                                  :den {:tag :default
+                                        :text "2"}}
 
-                          :nodes [{:render-tag :sym
-                                   :coef {:render-tag :default
-                                          :text 3
-                                          }
-                                   :key :lambda
-                                   :exp {:render-tag :fraction
-                                         :num {:text 14}
-                                         :den {:text 15}}}
+                                 {:tag :op
+                                  :text '+}
 
-                                  {:render-tag :op
-                                   :text '+}
-                                  
-                                  {:render-tag :fraction
-                                   :num {:render-tag :sym
-                                         :key :pi
-                                         :coef
-                                         {:render-tag :default
-                                          :text 10}}
-                                   :den {:render-tag :default
-                                         :text "2"}}
+                                 {:tag :derivative
+                                  :partial? true
+                                  :num {:tag :default
+                                        :text 'y}
+                                  :den
 
-                                  {:render-tag :op
-                                   :text '+}
+                                  {:tag :default
+                                   :text 'x}}]}}]}}]})])
 
-                                  {:render-tag :derivative
-                                   :partial? true
-                                   :num {:render-tag :default
-                                         :text 'y}
-                                   :den
-
-                                   {:render-tag :default
-                                    :text 'x}}]}}]}}]})]])
